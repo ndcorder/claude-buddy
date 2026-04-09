@@ -30,20 +30,28 @@ switch (command) {
   case "verify":
     await import("./verify.ts");
     break;
+  case "doctor":
+    await import("./doctor.ts");
+    break;
+  case "test-statusline":
+    await import("./test-statusline.ts");
+    break;
   case "--help":
   case "-h":
     console.log(`
 claude-buddy — permanent coding companion for Claude Code
 
 Commands:
-  install      Set up MCP server, skill, hooks, and status line
-  show         Display your current buddy
-  hunt         Search for a specific buddy (species, rarity, stats)
-  verify       Verify what buddy your current ID produces
-  uninstall    Remove all claude-buddy integrations
+  install           Set up MCP server, skill, hooks, and status line
+  show              Display your current buddy
+  hunt              Search for a specific buddy (species, rarity, stats)
+  verify            Verify what buddy your current ID produces
+  doctor            Run diagnostic report (paste output in bug reports)
+  test-statusline   Install temporary diagnostic status line in Claude Code
+  uninstall         Remove all claude-buddy integrations
 
 Options:
-  --help, -h   Show this help
+  --help, -h        Show this help
 `);
     break;
   default:
