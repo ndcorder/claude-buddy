@@ -6,15 +6,7 @@
 
 Your buddy lives on. Same species, same stats, same personality — now powered by MCP instead of binary internals. No patches, no downgrades, no hacks. Just a clean, standalone companion that works with any Claude Code version, past or future.
 
-```
-                                       [___]
-                                       /\  /\
- .----------------------------.       ((°)(°))
- | *adjusts tophat* that      |       (  ><  )
- | error handler needs a      |--      `----'
- | finally block              |         Mira
- `----------------------------'
-```
+![claude-buddy in action](screenshot.png)
 
 > **Note:** This is a quick-and-dirty MVP — built in a single session the morning I realized my buddy was gone. Priority #1 was getting the companion back to life as fast as possible. It's fully functional (animated art, speech bubbles, rarity colors, contextual comments), but rough around the edges. Polishing, optimizations, and new features (leveling, buddy pair-programming, cross-session memory, and more) are coming. PRs and ideas welcome.
 
