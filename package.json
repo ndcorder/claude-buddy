@@ -1,7 +1,7 @@
 {
   "name": "claude-buddy",
-  "version": "1.0.0",
-  "description": "Permanent coding companion for Claude Code — survives any update",
+  "version": "0.1.0",
+  "description": "Permanent coding companion for Claude Code — survives any update (MVP)",
   "type": "module",
   "bin": {
     "claude-buddy": "./cli/index.ts"

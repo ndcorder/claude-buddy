@@ -36,6 +36,8 @@ I opened Claude Code that morning, typed `/buddy`, and got `Unknown skill: buddy
 
 ## Quick Start
 
+> **Status: v0.1.0 (MVP)** — fully functional on Linux, may have terminal-specific quirks on macOS/other platforms. If something looks broken: `bun run doctor` and [open an issue](https://github.com/1270011/claude-buddy/issues/new).
+
 ```bash
 # Clone
 git clone https://github.com/1270011/claude-buddy
@@ -206,6 +208,9 @@ claude-buddy/
 │   ├── show.ts           # Terminal display
 │   ├── hunt.ts           # Brute-force search
 │   ├── verify.ts         # ID verification
+│   ├── doctor.ts         # Diagnostic report
+│   ├── test-statusline.ts # Temporary diagnostic status line
+│   ├── backup.ts         # Snapshot/restore state
 │   └── uninstall.ts      # Clean removal
 └── package.json
 ```
@@ -219,6 +224,94 @@ claude-buddy/
 | **claude-buddy** | **Yes** | **Yes** | **Yes** | **None** |
 
 MCP is an industry standard protocol. Skills are Markdown files. Hooks and status line are shell scripts. Nothing depends on Claude Code's binary internals. When Claude Code updates, your buddy stays.
+
+## Diagnostic Tools
+
+claude-buddy ships with built-in diagnostics for debugging issues across different terminals and platforms.
+
+### `bun run doctor`
+
+Runs a complete diagnostic report — environment, terminal info, claude-buddy state, settings, padding strategy test, and live status line output. **Always run this first when filing a bug report** and paste the entire output.
+
+```bash
+bun run doctor
+```
+
+### `bun run test-statusline`
+
+Temporarily replaces your status line with a multi-line diagnostic test. Shows multi-line rendering, padding strategies side-by-side, color support, and Unicode handling — directly in Claude Code's status line area.
+
+```bash
+# Install test status line (backs up your config first)
+bun run test-statusline
+
+# Restart Claude Code to see the test
+# Take a screenshot, note what renders correctly
+
+# Restore your buddy
+bun run test-statusline restore
+```
+
+### `bun run backup`
+
+Snapshot all claude-buddy state (settings, MCP config, skill, companion data) to a timestamped backup. Use this before experimenting with anything.
+
+```bash
+bun run backup              # create snapshot
+bun run backup list         # list all snapshots
+bun run backup restore      # restore latest
+bun run backup restore <ts> # restore specific
+```
+
+## Troubleshooting
+
+### Buddy not appearing in status line
+
+1. Run `bun run doctor` and check the "Live status line output" section — does the script work directly?
+2. Restart Claude Code completely (not just a new conversation — `instructions` are loaded once at session start)
+3. Check `~/.claude/settings.json` has the `statusLine` block pointing at the right path
+4. Make sure `bun` and `jq` are installed and in `$PATH`
+
+### Buddy comments not showing after Claude responses
+
+The buddy comment mechanism uses an MCP server `instructions` field that Claude only reads at **session start**. If you installed claude-buddy in an existing Claude Code session, comments won't appear until you restart.
+
+```bash
+# Verify MCP server is registered
+jq '.mcpServers["claude-buddy"]' ~/.claude.json
+```
+
+Then completely restart Claude Code (close and reopen).
+
+### Buddy art looks broken or misaligned
+
+This is a known MVP issue on some terminal/platform combinations. Different terminals render Braille Pattern Blank (U+2800) at different widths, breaking the right-alignment math.
+
+To help us fix it:
+
+1. Run `bun run doctor` and paste the output in a [new issue](https://github.com/1270011/claude-buddy/issues/new)
+2. Run `bun run test-statusline` and screenshot the result in Claude Code
+3. Then `bun run test-statusline restore`
+
+### Multiple status lines / conflict with previous tool
+
+If you used another status line tool (like `gsd-statusline`, `ccusage`, etc.) before installing claude-buddy, your `~/.claude/settings.json` might have leftover config. Run `bun run backup` first, then `bun run install-buddy` to overwrite.
+
+To restore your previous tool:
+
+```bash
+bun run cli/uninstall.ts
+# Then re-add your previous statusLine block manually
+```
+
+### Recovery from a broken state
+
+Always available:
+
+```bash
+bun run backup restore   # restore latest backup
+bun run cli/uninstall.ts # full clean removal
+```
 
 ## Uninstall
 
