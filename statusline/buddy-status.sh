@@ -215,7 +215,7 @@ REACTION_FILE="$HOME/.claude-buddy/reaction.$SID.json"
 REACTION_TTL=0
 CONFIG_FILE="$HOME/.claude-buddy/config.json"
 if [ -f "$CONFIG_FILE" ]; then
-    _ttl=$(jq -r '.reactionTTL // 0' "$CONFIG_FILE" 2>/dev/null || echo 20)
+    _ttl=$(jq -r '.reactionTTL // 0' "$CONFIG_FILE" 2>/dev/null || echo 0)
     case "$_ttl" in ''|*[!0-9]*) ;; *) REACTION_TTL="$_ttl" ;; esac
 fi
 if [ -n "$REACTION" ] && [ "$REACTION" != "null" ] && [ "$REACTION" != "" ]; then
