@@ -84,6 +84,10 @@ bun run install-buddy
 Then restart Claude Code and type `/buddy`. That's it.
 
 <sub>💡 Need Bun? → `curl -fsSL https://bun.sh/install | bash`</sub>
+<br>
+<sub>💡 Want a global `claude-buddy` command? → `bun link`</sub>
+<br>
+<sub>💡 Need help? → `/buddy help` in Claude Code · `bun run help` or `claude-buddy help` (if linked) in terminal</sub>
 
 <br>
 
@@ -218,10 +222,16 @@ claude-buddy/
 | `/buddy off` / `on` | Mute / unmute reactions |
 | `/buddy rename <name>` | Rename (1–14 chars) |
 | `/buddy personality <text>` | Set custom personality |
+| `/buddy summon [slot]` | Summon a saved buddy (omit slot for random) |
+| `/buddy save [slot]` | Save current buddy to a named slot |
+| `/buddy list` | List all saved buddies |
+| `/buddy dismiss <slot>` | Remove a saved buddy slot |
+| `/buddy pick` | Launch interactive TUI picker (`! bun run pick`) |
 | `/buddy frequency [seconds]` | Show or set comment cooldown |
-| `/buddy style [classic\|round]` | Bubble border style |
-| `/buddy position [top\|left]` | Bubble position |
-| `/buddy rarity [on\|off]` | Show or hide stars + rarity line |
+| `/buddy style [classic\|round]` | Bubble border style (tmux only) |
+| `/buddy position [top\|left]` | Bubble position (tmux only) |
+| `/buddy rarity [on\|off]` | Show or hide stars + rarity line (tmux only) |
+| `/buddy help` | Show all buddy commands |
 
 ### CLI
 
@@ -229,20 +239,28 @@ claude-buddy/
 |---|---|
 | `bun run install-buddy` | Automated setup |
 | `bun run show` | Show buddy in terminal |
-| `bun run hunt` | Interactive search for specific species/rarity/stats |
+| `bun run pick` | Interactive TUI to find and save your dream buddy |
+| `bun run hunt` | Legacy search (use `pick` instead) |
 | `bun run doctor` | Full diagnostic report |
+| `bun run verify` | Verify buddy generation matches expected output |
 | `bun run backup` | Snapshot / restore state |
+| `bun run settings` | View / change buddy settings (TUI settings coming soon) |
+| `bun run disable` | Temporarily deactivate buddy |
+| `bun run enable` | Re-enable buddy |
+| `bun run help` | Full CLI reference |
 | `bun run cli/uninstall.ts` | Clean removal |
 
-### 🎯 Buddy Hunt
+<sub>💡 Want a global `claude-buddy` command? → `cd claude-buddy && bun link`</sub>
+
+### 🎯 Buddy Pick
 
 Want a specific species, rarity, or stat distribution?
 
 ```bash
-bun run hunt
+bun run pick
 ```
 
-Interactive prompts let you brute-force search for a userID that produces your dream buddy. Uses the exact same `wyhash + mulberry32` algorithm as Claude Code.
+Interactive TUI with saved buddies, criteria search, vim keys, and two-pane preview. Uses the exact same `wyhash + mulberry32` algorithm as Claude Code.
 
 </details>
 

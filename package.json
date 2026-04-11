@@ -15,6 +15,7 @@
         "doctor": "bun run cli/doctor.ts",
         "test-statusline": "bun run cli/test-statusline.ts",
         "backup": "bun run cli/backup.ts",
+        "settings": "bun run cli/settings.ts",
         "disable": "bun run cli/disable.ts",
         "enable": "bun run cli/install.ts",
         "help": "bun run cli/index.ts help"
