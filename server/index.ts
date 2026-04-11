@@ -263,7 +263,7 @@ server.tool(
   "buddy_frequency",
   "Configure how often buddy comments appear in the speech bubble. Returns current settings if called without arguments.",
   {
-    cooldown: z.number().int().min(5).max(300).optional().describe("Minimum seconds between displayed comments (default 30). The buddy always writes comments, but the display only updates this often."),
+    cooldown: z.number().int().min(0).max(300).optional().describe("Minimum seconds between displayed comments (default 30, 0 = no throttling). The buddy always writes comments, but the display only updates this often."),
   },
   async ({ cooldown }) => {
     if (cooldown === undefined) {
