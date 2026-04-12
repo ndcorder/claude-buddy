@@ -1,12 +1,15 @@
 /**
  * Achievement badges — milestones that unlock as you code with your buddy
  *
- * Events (errors seen, pets, turns, etc.) are tracked via counters in
- * ~/.claude-buddy/events.json.  This module checks thresholds and
- * awards badges, persisted in ~/.claude-buddy/unlocked.json.
+ * Event counters are split into two scopes:
+ *   Global (events.json):      coding-activity counters (errors, tests, diffs, days, sessions, commands)
+ *   Per-slot (events.<slot>.json): buddy-relationship counters (pets, turns, reactions)
+ *
+ * Achievement checks merge both scopes so threshold logic is transparent.
+ * All writes use tmp+rename for atomicity (same pattern as state.ts).
  */
 
-import { readFileSync, writeFileSync, mkdirSync, existsSync } from "fs";
+import { readFileSync, writeFileSync, mkdirSync, existsSync, renameSync } from "fs";
 import { join } from "path";
 import { homedir } from "os";
 
@@ -15,55 +18,132 @@ const EVENTS_FILE = join(STATE_DIR, "events.json");
 const DAYS_FILE = join(STATE_DIR, "active_days.json");
 const UNLOCKED_FILE = join(STATE_DIR, "unlocked.json");
 
+function slotEventsFile(slot: string): string {
+  return join(STATE_DIR, `events.${slot}.json`);
+}
+
 function ensureDir(): void {
   if (!existsSync(STATE_DIR)) mkdirSync(STATE_DIR, { recursive: true });
 }
 
-// ─── Event counters ─────────────────────────────────────────────────────────
+function atomicWrite(path: string, data: string): void {
+  ensureDir();
+  const tmp = path + ".tmp";
+  writeFileSync(tmp, data);
+  renameSync(tmp, path);
+}
 
-export interface EventCounters {
+// ─── Event counters (global) ─────────────────────────────────────────────────
+
+export interface GlobalCounters {
   errors_seen: number;
   tests_failed: number;
   large_diffs: number;
-  turns: number;
-  pets: number;
   sessions: number;
-  reactions_given: number;
   commands_run: number;
   days_active: number;
 }
+
+// ─── Event counters (per-slot) ────────────────────────────────────────────────
+
+export interface SlotCounters {
+  pets: number;
+  turns: number;
+  reactions_given: number;
+}
+
+// ─── Merged view for achievement checks ───────────────────────────────────────
+
+export interface EventCounters extends GlobalCounters {
+  pets: number;
+  turns: number;
+  reactions_given: number;
+}
+
+export const GLOBAL_KEYS: (keyof GlobalCounters)[] = [
+  "errors_seen", "tests_failed", "large_diffs",
+  "sessions", "commands_run", "days_active",
+];
+
+export const SLOT_KEYS: (keyof SlotCounters)[] = [
+  "pets", "turns", "reactions_given",
+];
 
 export const COUNTER_KEYS: (keyof EventCounters)[] = [
   "errors_seen", "tests_failed", "large_diffs", "turns", "pets",
   "sessions", "reactions_given", "commands_run", "days_active",
 ];
 
-const EMPTY_EVENTS: EventCounters = {
-  errors_seen: 0, tests_failed: 0, large_diffs: 0, turns: 0,
-  pets: 0, sessions: 0, reactions_given: 0, commands_run: 0,
-  days_active: 0,
+const EMPTY_GLOBAL: GlobalCounters = {
+  errors_seen: 0, tests_failed: 0, large_diffs: 0,
+  sessions: 0, commands_run: 0, days_active: 0,
 };
 
-export function loadEvents(): EventCounters {
+const EMPTY_SLOT: SlotCounters = {
+  pets: 0, turns: 0, reactions_given: 0,
+};
+
+export function loadGlobalEvents(): GlobalCounters {
   try {
     const parsed = JSON.parse(readFileSync(EVENTS_FILE, "utf8"));
-    return { ...EMPTY_EVENTS, ...parsed };
+    return { ...EMPTY_GLOBAL, ...parsed };
   } catch {
-    return { ...EMPTY_EVENTS };
+    return { ...EMPTY_GLOBAL };
   }
 }
 
-export function saveEvents(events: EventCounters): void {
-  ensureDir();
-  writeFileSync(EVENTS_FILE, JSON.stringify(events, null, 2));
+export function saveGlobalEvents(events: GlobalCounters): void {
+  atomicWrite(EVENTS_FILE, JSON.stringify(events, null, 2));
 }
 
-export function incrementEvent(key: keyof EventCounters, amount: number = 1): EventCounters {
-  const events = loadEvents();
-  events[key] += amount;
-  saveEvents(events);
-  return events;
+export function loadSlotEvents(slot: string): SlotCounters {
+  try {
+    const parsed = JSON.parse(readFileSync(slotEventsFile(slot), "utf8"));
+    return { ...EMPTY_SLOT, ...parsed };
+  } catch {
+    return { ...EMPTY_SLOT };
+  }
 }
+
+export function saveSlotEvents(slot: string, events: SlotCounters): void {
+  atomicWrite(slotEventsFile(slot), JSON.stringify(events, null, 2));
+}
+
+export function loadEvents(slot?: string): EventCounters {
+  const global = loadGlobalEvents();
+  if (!slot) {
+    return { ...global, pets: 0, turns: 0, reactions_given: 0 };
+  }
+  const slotEvents = loadSlotEvents(slot);
+  return {
+    ...global,
+    pets: slotEvents.pets,
+    turns: slotEvents.turns,
+    reactions_given: slotEvents.reactions_given,
+  };
+}
+
+export function incrementEvent(key: keyof EventCounters, amount: number = 1, slot?: string): EventCounters {
+  if ((SLOT_KEYS as string[]).includes(key) && slot) {
+    const slotEvents = loadSlotEvents(slot);
+    (slotEvents as any)[key] += amount;
+    saveSlotEvents(slot, slotEvents);
+  } else {
+    const global = loadGlobalEvents();
+    if ((GLOBAL_KEYS as string[]).includes(key)) {
+      (global as any)[key] += amount;
+    }
+    saveGlobalEvents(global);
+  }
+  return loadEvents(slot);
+}
+
+// ─── Backward-compatible overloads ────────────────────────────────────────────
+// The shell hooks (react.sh) write directly to events.json for global counters
+// like errors_seen and tests_failed. The loadEvents() and saveEvents() names
+// below maintain that compatibility.
+
+export { loadEvents as loadGlobalEventsCompat, loadGlobalEvents as loadGlobalEventsDirect };
 
 // ─── Day tracking ────────────────────────────────────────────────────────────
 
@@ -84,12 +164,11 @@ export function trackActiveDay(): void {
 
   tracker.lastDate = today;
   tracker.totalDays += 1;
-  ensureDir();
-  writeFileSync(DAYS_FILE, JSON.stringify(tracker, null, 2));
+  atomicWrite(DAYS_FILE, JSON.stringify(tracker, null, 2));
 
-  const events = loadEvents();
+  const events = loadGlobalEvents();
   events.days_active = tracker.totalDays;
-  saveEvents(events);
+  saveGlobalEvents(events);
 }
 
 // ─── Achievement definitions ─────────────────────────────────────────────────
@@ -239,6 +318,7 @@ export const ACHIEVEMENTS: Achievement[] = [
 export interface UnlockedAchievement {
   id: string;
   unlockedAt: number;
+  slot?: string;
 }
 
 export function loadUnlocked(): UnlockedAchievement[] {
@@ -250,14 +330,13 @@ export function loadUnlocked(): UnlockedAchievement[] {
 }
 
 export function saveUnlocked(unlocked: UnlockedAchievement[]): void {
-  ensureDir();
-  writeFileSync(UNLOCKED_FILE, JSON.stringify(unlocked, null, 2));
+  atomicWrite(UNLOCKED_FILE, JSON.stringify(unlocked, null, 2));
 }
 
 // ─── Check + award ───────────────────────────────────────────────────────────
 
-export function checkAndAward(events?: EventCounters): Achievement[] {
-  const e = events ?? loadEvents();
+export function checkAndAward(slot?: string): Achievement[] {
+  const e = loadEvents(slot);
   const unlocked = loadUnlocked();
   const unlockedIds = new Set(unlocked.map((u) => u.id));
 
@@ -266,7 +345,7 @@ export function checkAndAward(events?: EventCounters): Achievement[] {
   for (const ach of ACHIEVEMENTS) {
     if (unlockedIds.has(ach.id)) continue;
     if (ach.check(e)) {
-      unlocked.push({ id: ach.id, unlockedAt: Date.now() });
+      unlocked.push({ id: ach.id, unlockedAt: Date.now(), slot: slot ?? undefined });
       newlyUnlocked.push(ach);
     }
   }

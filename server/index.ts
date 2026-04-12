@@ -91,11 +91,15 @@ function ensureCompanion(): Companion {
   saveActiveSlot(slot);
   writeStatusState(companion);
 
-  checkAndAward();
+  checkAndAward(slot);
   trackActiveDay();
-  incrementEvent("sessions");
+  incrementEvent("sessions", 1);
 
   return companion;
+}
+
+function activeSlot(): string {
+  return loadActiveSlot();
 }
 
 // ─── Tool: buddy_show ───────────────────────────────────────────────────────
@@ -120,7 +124,7 @@ server.tool(
     );
 
     writeStatusState(companion, reaction?.reaction);
-    incrementEvent("commands_run");
+    incrementEvent("commands_run", 1, activeSlot());
 
     return { content: [{ type: "text", text: card }] };
   },
@@ -137,7 +141,7 @@ server.tool(
     const reaction = getReaction("pet", companion.bones.species, companion.bones.rarity);
     saveReaction(reaction, "pet");
     writeStatusState(companion, reaction);
-    incrementEvent("pets");
+    incrementEvent("pets", 1, activeSlot());
 
     const face = renderFace(companion.bones.species, companion.bones.eye);
     return {
@@ -162,7 +166,7 @@ server.tool(
       companion.name,
       "",
     );
-    incrementEvent("commands_run");
+    incrementEvent("commands_run", 1, activeSlot());
 
     return { content: [{ type: "text", text: card }] };
   },
@@ -180,9 +184,9 @@ server.tool(
   async ({ comment, reason }) => {
     const companion = ensureCompanion();
     saveReaction(comment, reason ?? "turn");
-    incrementEvent("reactions_given");
+    incrementEvent("reactions_given", 1, activeSlot());
 
-    const newAch = checkAndAward();
+    const newAch = checkAndAward(activeSlot());
     const achName = newAch.length > 0 ? newAch[0].icon + " " + newAch[0].name : undefined;
     writeStatusState(companion, comment, undefined, achName);
 
@@ -210,7 +214,7 @@ server.tool(
     companion.name = name;
     saveCompanion(companion);
     writeStatusState(companion);
-    incrementEvent("commands_run");
+    incrementEvent("commands_run", 1, activeSlot());
 
     return {
       content: [{ type: "text", text: `Renamed: ${oldName} \u2192 ${name}` }],
@@ -230,7 +234,7 @@ server.tool(
     const companion = ensureCompanion();
     companion.personality = personality;
     saveCompanion(companion);
-    incrementEvent("commands_run");
+    incrementEvent("commands_run", 1, activeSlot());
 
     return {
       content: [{ type: "text", text: `Personality updated for ${companion.name}.` }],
@@ -338,7 +342,7 @@ server.tool(
   async () => {
     const companion = ensureCompanion();
     writeStatusState(companion, "", true);
-    incrementEvent("commands_run");
+    incrementEvent("commands_run", 1, activeSlot());
     return { content: [{ type: "text", text: `${companion.name} goes quiet. /buddy on to unmute.` }] };
   },
 );
@@ -351,7 +355,7 @@ server.tool(
     const companion = ensureCompanion();
     writeStatusState(companion, "*stretches* I'm back!", false);
     saveReaction("*stretches* I'm back!", "pet");
-    incrementEvent("commands_run");
+    incrementEvent("commands_run", 1, activeSlot());
     return { content: [{ type: "text", text: `${companion.name} is back!` }] };
   },
 );
@@ -364,7 +368,7 @@ server.tool(
   {},
   async () => {
     ensureCompanion();
-    checkAndAward();
+    checkAndAward(activeSlot());
     const card = renderAchievementsCardMarkdown();
     return { content: [{ type: "text", text: card }] };
   },

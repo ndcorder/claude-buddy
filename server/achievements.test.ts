@@ -2,16 +2,20 @@
  * Unit tests for achievements.ts
  *
  * Tests the achievement badge system: definitions, event counters,
- * threshold checks, and the pure check logic. The checkAndAward
- * function and renderers do file I/O and are not tested here,
- * consistent with the project policy in TESTING.md.
+ * threshold checks, per-slot scoping, and the pure check logic.
+ * File I/O functions (checkAndAward, renderers) persist to disk and
+ * are not tested here, consistent with the project policy in TESTING.md.
  */
 
 import { describe, test, expect } from "bun:test";
 import {
   ACHIEVEMENTS,
   COUNTER_KEYS,
+  GLOBAL_KEYS,
+  SLOT_KEYS,
   type EventCounters,
+  type GlobalCounters,
+  type SlotCounters,
 } from "./achievements.ts";
 
 const EMPTY_EVENTS: EventCounters = {
@@ -61,6 +65,25 @@ describe("ACHIEVEMENTS array", () => {
       const result = ach.check(EMPTY_EVENTS);
       expect(typeof result).toBe("boolean");
     }
+  });
+});
+
+// ─── Counter key partitions ──────────────────────────────────────────────
+
+describe("counter key partitions", () => {
+  test("GLOBAL_KEYS and SLOT_KEYS are disjoint", () => {
+    const globalSet = new Set(GLOBAL_KEYS as string[]);
+    const slotSet = new Set(SLOT_KEYS as string[]);
+    for (const k of globalSet) {
+      expect(slotSet.has(k)).toBe(false);
+    }
+  });
+
+  test("COUNTER_KEYS is the union of GLOBAL_KEYS and SLOT_KEYS", () => {
+    const counterSet = new Set(COUNTER_KEYS as string[]);
+    for (const k of GLOBAL_KEYS) expect(counterSet.has(k)).toBe(true);
+    for (const k of SLOT_KEYS) expect(counterSet.has(k)).toBe(true);
+    expect(COUNTER_KEYS.length).toBe(GLOBAL_KEYS.length + SLOT_KEYS.length);
   });
 });
 
@@ -218,6 +241,61 @@ describe("unlock simulation via check functions", () => {
     expect(ids).toContain("good_boy");
     expect(ids).toContain("first_steps");
     expect(ids).not.toContain("best_friend");
+  });
+});
+
+// ─── Per-slot vs global scoping ───────────────────────────────────────────
+
+describe("per-slot vs global counter scoping", () => {
+  test("pets is a slot-scoped key", () => {
+    expect((SLOT_KEYS as string[]).includes("pets")).toBe(true);
+    expect((GLOBAL_KEYS as string[]).includes("pets")).toBe(false);
+  });
+
+  test("turns is a slot-scoped key", () => {
+    expect((SLOT_KEYS as string[]).includes("turns")).toBe(true);
+  });
+
+  test("reactions_given is a slot-scoped key", () => {
+    expect((SLOT_KEYS as string[]).includes("reactions_given")).toBe(true);
+  });
+
+  test("errors_seen is a global key", () => {
+    expect((GLOBAL_KEYS as string[]).includes("errors_seen")).toBe(true);
+    expect((SLOT_KEYS as string[]).includes("errors_seen")).toBe(false);
+  });
+
+  test("tests_failed is a global key", () => {
+    expect((GLOBAL_KEYS as string[]).includes("tests_failed")).toBe(true);
+  });
+
+  test("days_active is a global key", () => {
+    expect((GLOBAL_KEYS as string[]).includes("days_active")).toBe(true);
+  });
+
+  test("commands_run is a global key", () => {
+    expect((GLOBAL_KEYS as string[]).includes("commands_run")).toBe(true);
+  });
+
+  test("good_boy and best_friend check pets (slot-scoped)", () => {
+    const good = ACHIEVEMENTS.find((a) => a.id === "good_boy")!;
+    const best = ACHIEVEMENTS.find((a) => a.id === "best_friend")!;
+    expect(good.check(makeEvents({ pets: 0 }))).toBe(false);
+    expect(best.check(makeEvents({ pets: 0 }))).toBe(false);
+    expect(good.check(makeEvents({ pets: 10 }))).toBe(true);
+    expect(best.check(makeEvents({ pets: 50 }))).toBe(true);
+  });
+
+  test("dedicated and thousand_turns check turns (slot-scoped)", () => {
+    const ded = ACHIEVEMENTS.find((a) => a.id === "dedicated")!;
+    const thou = ACHIEVEMENTS.find((a) => a.id === "thousand_turns")!;
+    expect(ded.check(makeEvents({ turns: 200 }))).toBe(true);
+    expect(thou.check(makeEvents({ turns: 1000 }))).toBe(true);
+  });
+
+  test("chatterbox checks reactions_given (slot-scoped)", () => {
+    const ach = ACHIEVEMENTS.find((a) => a.id === "chatterbox")!;
+    expect(ach.check(makeEvents({ reactions_given: 100 }))).toBe(true);
   });
 });
 
