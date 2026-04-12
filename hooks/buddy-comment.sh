@@ -59,7 +59,7 @@ if command -v jq >/dev/null 2>&1; then
         echo '{}' > "$EVENTS_FILE"
     fi
     TMP=$(mktemp)
-    jq '.turns = (.turns // 0 + 1) | .reactions_given = (.reactions_given // 0 + 1)' "$EVENTS_FILE" > "$TMP" 2>/dev/null && mv "$TMP" "$EVENTS_FILE"
+    jq '.turns = (.turns // 0 + 1)' "$EVENTS_FILE" > "$TMP" 2>/dev/null && mv "$TMP" "$EVENTS_FILE"
 fi
 
 exit 0

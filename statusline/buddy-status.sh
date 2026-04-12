@@ -213,7 +213,7 @@ esac
 # ─── Reaction bubble (with TTL check) ────────────────────────────────────────
 BUBBLE=""
 if [ -n "$ACHIEVEMENT" ] && [ "$ACHIEVEMENT" != "null" ] && [ "$ACHIEVEMENT" != "" ]; then
-    BUBBLE=$'\U0001F3C6'" $ACHIEVEMENT"
+    BUBBLE=$'\xf0\x9f\x8f\x86'" $ACHIEVEMENT"
 fi
 REACTION_FILE="$HOME/.claude-buddy/reaction.$SID.json"
 REACTION_TTL=0

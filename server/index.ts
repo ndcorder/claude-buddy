@@ -28,7 +28,7 @@ import {
 import { renderCompanionCardMarkdown } from "./art.ts";
 import {
   incrementEvent, checkAndAward, trackActiveDay,
-  renderAchievementsCard,
+  renderAchievementsCardMarkdown,
 } from "./achievements.ts";
 
 function getInstructions(): string {
@@ -181,10 +181,6 @@ server.tool(
     const companion = ensureCompanion();
     saveReaction(comment, reason ?? "turn");
     incrementEvent("reactions_given");
-    if (reason === "error") incrementEvent("errors_seen");
-    if (reason === "test-fail") incrementEvent("tests_failed");
-    if (reason === "large-diff") incrementEvent("large_diffs");
-    incrementEvent("turns");
 
     const newAch = checkAndAward();
     const achName = newAch.length > 0 ? newAch[0].icon + " " + newAch[0].name : undefined;
@@ -369,7 +365,7 @@ server.tool(
   async () => {
     ensureCompanion();
     checkAndAward();
-    const card = renderAchievementsCard();
+    const card = renderAchievementsCardMarkdown();
     return { content: [{ type: "text", text: card }] };
   },
 );

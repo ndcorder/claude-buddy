@@ -294,8 +294,7 @@ export function renderAchievementsCard(): string {
   const sep = `\u251c${"\u254c".repeat(W - 2)}\u2524`;
   const lines: string[] = [];
 
-  const visibleAchs = ACHIEVEMENTS.filter((a) => !a.secret || unlockedIds.has(a.id));
-  const total = visibleAchs.length;
+  const total = ACHIEVEMENTS.length;
   const earned = unlockedIds.size;
 
   lines.push(`${GOLD}\u256d${hr}\u256e${NC}`);
@@ -335,4 +334,35 @@ export function renderAchievementsCard(): string {
   lines.push(`${GOLD}\u2570${hr}\u256f${NC}`);
 
   return lines.join("\n");
+}
+
+export function renderAchievementsCardMarkdown(): string {
+  const unlocked = loadUnlocked();
+  const unlockedIds = new Set(unlocked.map((u) => u.id));
+  const total = ACHIEVEMENTS.length;
+  const earned = unlockedIds.size;
+
+  const barFilled = total > 0 ? Math.round((earned / total) * 20) : 0;
+  const bar = "\u2588".repeat(barFilled) + "\u2591".repeat(20 - barFilled);
+
+  const parts: string[] = [];
+  parts.push(`### \ud83c\udfc6 Achievements \u2014 ${earned}/${total}`);
+  parts.push("");
+  parts.push(`\`${bar}\``);
+  parts.push("");
+
+  for (const ach of ACHIEVEMENTS) {
+    if (ach.secret && !unlockedIds.has(ach.id)) continue;
+    const done = unlockedIds.has(ach.id);
+    const status = done ? "\u2705" : "\u2610";
+    const line = `${ach.icon}${status} **${ach.name}** \u2014 ${ach.description}`;
+    parts.push(line);
+  }
+
+  if (earned > 0 && earned === ACHIEVEMENTS.length) {
+    parts.push("");
+    parts.push("\u2728 **ALL ACHIEVEMENTS UNLOCKED!** \u2728");
+  }
+
+  return parts.join("\n");
 }
