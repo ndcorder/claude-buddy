@@ -26,6 +26,10 @@ import {
   getReaction, generatePersonalityPrompt,
 } from "./reactions.ts";
 import { renderCompanionCardMarkdown } from "./art.ts";
+import {
+  incrementEvent, checkAndAward, trackActiveDay,
+  renderAchievementsCardMarkdown,
+} from "./achievements.ts";
 
 function getInstructions(): string {
   const companion = loadCompanion();
@@ -86,6 +90,11 @@ function ensureCompanion(): Companion {
   saveCompanionSlot(companion, slot);
   saveActiveSlot(slot);
   writeStatusState(companion);
+
+  checkAndAward();
+  trackActiveDay();
+  incrementEvent("sessions");
+
   return companion;
 }
 
@@ -111,6 +120,7 @@ server.tool(
     );
 
     writeStatusState(companion, reaction?.reaction);
+    incrementEvent("commands_run");
 
     return { content: [{ type: "text", text: card }] };
   },
@@ -127,6 +137,7 @@ server.tool(
     const reaction = getReaction("pet", companion.bones.species, companion.bones.rarity);
     saveReaction(reaction, "pet");
     writeStatusState(companion, reaction);
+    incrementEvent("pets");
 
     const face = renderFace(companion.bones.species, companion.bones.eye);
     return {
@@ -149,8 +160,9 @@ server.tool(
     const card = renderCompanionCardMarkdown(
       companion.bones,
       companion.name,
-      "",  // no personality in stats view
+      "",
     );
+    incrementEvent("commands_run");
 
     return { content: [{ type: "text", text: card }] };
   },
@@ -168,11 +180,18 @@ server.tool(
   async ({ comment, reason }) => {
     const companion = ensureCompanion();
     saveReaction(comment, reason ?? "turn");
-    writeStatusState(companion, comment);
+    incrementEvent("reactions_given");
+
+    const newAch = checkAndAward();
+    const achName = newAch.length > 0 ? newAch[0].icon + " " + newAch[0].name : undefined;
+    writeStatusState(companion, comment, undefined, achName);
 
     const face = renderFace(companion.bones.species, companion.bones.eye);
+    const achNotice = newAch.length > 0
+      ? `\n${newAch.map((a) => `${a.icon} Achievement Unlocked: ${a.name}!`).join("\n")}`
+      : "";
     return {
-      content: [{ type: "text", text: `${face} ${companion.name}: "${comment}"` }],
+      content: [{ type: "text", text: `${face} ${companion.name}: "${comment}"${achNotice}` }],
     };
   },
 );
@@ -191,6 +210,7 @@ server.tool(
     companion.name = name;
     saveCompanion(companion);
     writeStatusState(companion);
+    incrementEvent("commands_run");
 
     return {
       content: [{ type: "text", text: `Renamed: ${oldName} \u2192 ${name}` }],
@@ -210,6 +230,7 @@ server.tool(
     const companion = ensureCompanion();
     companion.personality = personality;
     saveCompanion(companion);
+    incrementEvent("commands_run");
 
     return {
       content: [{ type: "text", text: `Personality updated for ${companion.name}.` }],
@@ -236,6 +257,7 @@ server.tool(
       "  /buddy on         Unmute reactions",
       "  /buddy rename     Rename companion (1-14 chars)",
       "  /buddy personality  Set custom personality text",
+      "  /buddy achievements  Show achievement badges",
       "  /buddy summon     Summon a saved buddy (omit slot for random)",
       "  /buddy save       Save current buddy to a named slot",
       "  /buddy list       List all saved buddies",
@@ -316,6 +338,7 @@ server.tool(
   async () => {
     const companion = ensureCompanion();
     writeStatusState(companion, "", true);
+    incrementEvent("commands_run");
     return { content: [{ type: "text", text: `${companion.name} goes quiet. /buddy on to unmute.` }] };
   },
 );
@@ -328,7 +351,22 @@ server.tool(
     const companion = ensureCompanion();
     writeStatusState(companion, "*stretches* I'm back!", false);
     saveReaction("*stretches* I'm back!", "pet");
+    incrementEvent("commands_run");
     return { content: [{ type: "text", text: `${companion.name} is back!` }] };
+  },
+);
+
+// ─── Tool: buddy_achievements ────────────────────────────────────────────────
+
+server.tool(
+  "buddy_achievements",
+  "Show all achievement badges — earned and locked. Displays a card with progress bar and status for each badge.",
+  {},
+  async () => {
+    ensureCompanion();
+    checkAndAward();
+    const card = renderAchievementsCardMarkdown();
+    return { content: [{ type: "text", text: card }] };
   },
 );
 
