@@ -42,13 +42,13 @@ export interface GlobalCounters {
   sessions: number;
   commands_run: number;
   days_active: number;
+  turns: number;
 }
 
 // ─── Event counters (per-slot) ────────────────────────────────────────────────
 
 export interface SlotCounters {
   pets: number;
-  turns: number;
   reactions_given: number;
 }
 
@@ -56,17 +56,16 @@ export interface SlotCounters {
 
 export interface EventCounters extends GlobalCounters {
   pets: number;
-  turns: number;
   reactions_given: number;
 }
 
 export const GLOBAL_KEYS: (keyof GlobalCounters)[] = [
   "errors_seen", "tests_failed", "large_diffs",
-  "sessions", "commands_run", "days_active",
+  "sessions", "commands_run", "days_active", "turns",
 ];
 
 export const SLOT_KEYS: (keyof SlotCounters)[] = [
-  "pets", "turns", "reactions_given",
+  "pets", "reactions_given",
 ];
 
 export const COUNTER_KEYS: (keyof EventCounters)[] = [
@@ -76,11 +75,11 @@ export const COUNTER_KEYS: (keyof EventCounters)[] = [
 
 const EMPTY_GLOBAL: GlobalCounters = {
   errors_seen: 0, tests_failed: 0, large_diffs: 0,
-  sessions: 0, commands_run: 0, days_active: 0,
+  sessions: 0, commands_run: 0, days_active: 0, turns: 0,
 };
 
 const EMPTY_SLOT: SlotCounters = {
-  pets: 0, turns: 0, reactions_given: 0,
+  pets: 0, reactions_given: 0,
 };
 
 export function loadGlobalEvents(): GlobalCounters {
@@ -112,13 +111,12 @@ export function saveSlotEvents(slot: string, events: SlotCounters): void {
 export function loadEvents(slot?: string): EventCounters {
   const global = loadGlobalEvents();
   if (!slot) {
-    return { ...global, pets: 0, turns: 0, reactions_given: 0 };
+    return { ...global, pets: 0, reactions_given: 0 };
   }
   const slotEvents = loadSlotEvents(slot);
   return {
     ...global,
     pets: slotEvents.pets,
-    turns: slotEvents.turns,
     reactions_given: slotEvents.reactions_given,
   };
 }

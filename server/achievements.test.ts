@@ -252,8 +252,9 @@ describe("per-slot vs global counter scoping", () => {
     expect((GLOBAL_KEYS as string[]).includes("pets")).toBe(false);
   });
 
-  test("turns is a slot-scoped key", () => {
-    expect((SLOT_KEYS as string[]).includes("turns")).toBe(true);
+  test("turns is a global key", () => {
+    expect((GLOBAL_KEYS as string[]).includes("turns")).toBe(true);
+    expect((SLOT_KEYS as string[]).includes("turns")).toBe(false);
   });
 
   test("reactions_given is a slot-scoped key", () => {
@@ -286,7 +287,7 @@ describe("per-slot vs global counter scoping", () => {
     expect(best.check(makeEvents({ pets: 50 }))).toBe(true);
   });
 
-  test("dedicated and thousand_turns check turns (slot-scoped)", () => {
+  test("dedicated and thousand_turns check turns (global)", () => {
     const ded = ACHIEVEMENTS.find((a) => a.id === "dedicated")!;
     const thou = ACHIEVEMENTS.find((a) => a.id === "thousand_turns")!;
     expect(ded.check(makeEvents({ turns: 200 }))).toBe(true);
