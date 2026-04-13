@@ -72,6 +72,12 @@
 <!-- QUICK START                                                  -->
 <!-- ============================================================ -->
 
+## 📋 Requirements
+
+- **[bun](https://bun.sh/install)** on `PATH` — claude-buddy's MCP server runs on bun. Install once: `curl -fsSL https://bun.sh/install | bash`
+- **Claude Code v2.1.80+**
+- **Linux or macOS** (Windows is experimental)
+
 ## 🚀 Quick Start
 
 ```bash
@@ -83,8 +89,6 @@ bun run install-buddy
 
 Then restart Claude Code and type `/buddy`. That's it.
 
-<sub>💡 Need Bun? → `curl -fsSL https://bun.sh/install | bash`</sub>
-<br>
 <sub>💡 Want a global `claude-buddy` command? → `bun link`</sub>
 <br>
 <sub>💡 Need help? → `bun run help` or `claude-buddy help` (if linked) in terminal · `/buddy help` in Claude Code</sub>
