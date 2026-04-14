@@ -125,6 +125,7 @@ function ensureCompanion(): Companion {
   checkAndAward(slot);
   trackActiveDay();
   incrementEvent("sessions", 1);
+  incrementEvent("buddies_collected", 1);
 
   return companion;
 }
@@ -157,6 +158,8 @@ server.tool(
 
     writeStatusState(companion, reaction?.reaction);
     incrementEvent("commands_run", 1, activeSlot());
+    incrementEvent("shows", 1);
+    checkAndAward(activeSlot());
 
     return { content: [{ type: "text", text: card }] };
   },
@@ -180,9 +183,13 @@ server.tool(
     incrementEvent("pets", 1, activeSlot());
 
     const face = renderFace(companion.bones.species, companion.bones.eye);
+    const newAch = checkAndAward(activeSlot());
+    const achNotice = newAch.length > 0
+      ? `\n${newAch.map((a) => `${a.icon} Achievement Unlocked: ${a.name}!`).join("\n")}`
+      : "";
     return {
       content: [
-        { type: "text", text: `${face} ${companion.name}: "${reaction}"` },
+        { type: "text", text: `${face} ${companion.name}: "${reaction}"${achNotice}` },
       ],
     };
   },
@@ -205,6 +212,7 @@ server.tool(
       "", // no personality in stats view
     );
     incrementEvent("commands_run", 1, activeSlot());
+    checkAndAward(activeSlot());
 
     return { content: [{ type: "text", text: card }] };
   },
@@ -268,9 +276,15 @@ server.tool(
     saveCompanion(companion);
     writeStatusState(companion);
     incrementEvent("commands_run", 1, activeSlot());
+    incrementEvent("renames", 1);
+
+    const newAch = checkAndAward(activeSlot());
+    const achNotice = newAch.length > 0
+      ? `\n${newAch.map((a) => `${a.icon} Achievement Unlocked: ${a.name}!`).join("\n")}`
+      : "";
 
     return {
-      content: [{ type: "text", text: `Renamed: ${oldName} \u2192 ${name}` }],
+      content: [{ type: "text", text: `Renamed: ${oldName} \u2192 ${name}${achNotice}` }],
     };
   },
 );
@@ -292,10 +306,16 @@ server.tool(
     companion.personality = personality;
     saveCompanion(companion);
     incrementEvent("commands_run", 1, activeSlot());
+    incrementEvent("personalities_set", 1);
+
+    const newAch = checkAndAward(activeSlot());
+    const achNotice = newAch.length > 0
+      ? `\n${newAch.map((a) => `${a.icon} Achievement Unlocked: ${a.name}!`).join("\n")}`
+      : "";
 
     return {
       content: [
-        { type: "text", text: `Personality updated for ${companion.name}.` },
+        { type: "text", text: `Personality updated for ${companion.name}.${achNotice}` },
       ],
     };
   },
@@ -342,6 +362,9 @@ server.tool(
       "  bun run enable          Re-enable buddy",
       "  bun run backup          Snapshot/restore state",
     ].join("\n");
+
+    incrementEvent("commands_run", 1, activeSlot());
+    incrementEvent("helps", 1);
 
     return { content: [{ type: "text", text: help }] };
   },
@@ -440,11 +463,18 @@ server.tool(
     const companion = ensureCompanion();
     writeStatusState(companion, "", true);
     incrementEvent("commands_run", 1, activeSlot());
+    incrementEvent("mutes", 1);
+
+    const newAch = checkAndAward(activeSlot());
+    const achNotice = newAch.length > 0
+      ? `\n${newAch.map((a) => `${a.icon} Achievement Unlocked: ${a.name}!`).join("\n")}`
+      : "";
+
     return {
       content: [
         {
           type: "text",
-          text: `${companion.name} goes quiet. /buddy on to unmute.`,
+          text: `${companion.name} goes quiet. /buddy on to unmute.${achNotice}`,
         },
       ],
     };
@@ -456,7 +486,14 @@ server.tool("buddy_unmute", "Unmute buddy reactions", {}, async () => {
   writeStatusState(companion, "*stretches* I'm back!", false);
   saveReaction("*stretches* I'm back!", "pet");
   incrementEvent("commands_run", 1, activeSlot());
-  return { content: [{ type: "text", text: `${companion.name} is back!` }] };
+  incrementEvent("unmutes", 1);
+
+  const newAch = checkAndAward(activeSlot());
+  const achNotice = newAch.length > 0
+    ? `\n${newAch.map((a) => `${a.icon} Achievement Unlocked: ${a.name}!`).join("\n")}`
+    : "";
+
+  return { content: [{ type: "text", text: `${companion.name} is back!${achNotice}` }] };
 });
 
 // ─── Tool: buddy_statusline ─────────────────────────────────────────────────
@@ -570,6 +607,7 @@ server.tool(
   async () => {
     ensureCompanion();
     checkAndAward(activeSlot());
+    incrementEvent("achievement_views", 1);
     const card = renderAchievementsCardMarkdown();
     return { content: [{ type: "text", text: card }] };
   },
@@ -628,6 +666,12 @@ server.tool(
 
     saveActiveSlot(targetSlot);
     writeStatusState(companion, `*${companion.name} arrives*`);
+    incrementEvent("summons", 1);
+
+    const newAch = checkAndAward(activeSlot());
+    const achNotice = newAch.length > 0
+      ? `\n${newAch.map((a) => `${a.icon} Achievement Unlocked: ${a.name}!`).join("\n")}`
+      : "";
 
     // Uses markdown renderer so the card displays cleanly in Claude Code's UI.
     const card = renderCompanionCardMarkdown(
@@ -636,7 +680,7 @@ server.tool(
       companion.personality,
       `*${companion.name} arrives*`,
     );
-    return { content: [{ type: "text", text: card }] };
+    return { content: [{ type: "text", text: `${card}${achNotice}` }] };
   },
 );
 
@@ -660,11 +704,19 @@ server.tool(
     const targetSlot = slot ? slugify(slot) : slugify(companion.name);
     saveCompanionSlot(companion, targetSlot);
     saveActiveSlot(targetSlot);
+    incrementEvent("buddies_collected", 1);
+    incrementEvent("saves", 1);
+
+    const newAch = checkAndAward(activeSlot());
+    const achNotice = newAch.length > 0
+      ? `\n${newAch.map((a) => `${a.icon} Achievement Unlocked: ${a.name}!`).join("\n")}`
+      : "";
+
     return {
       content: [
         {
           type: "text",
-          text: `${companion.name} saved to slot "${targetSlot}".`,
+          text: `${companion.name} saved to slot "${targetSlot}".${achNotice}`,
         },
       ],
     };
@@ -680,6 +732,8 @@ server.tool(
   async () => {
     const saved = listCompanionSlots();
     const activeSlot = loadActiveSlot();
+
+    incrementEvent("lists", 1);
 
     if (saved.length === 0) {
       return {
@@ -739,9 +793,16 @@ server.tool(
     }
 
     deleteCompanionSlot(targetSlot);
+
+    incrementEvent("dismissals", 1);
+    const newAch = checkAndAward(loadActiveSlot());
+    const achNotice = newAch.length > 0
+      ? `\n${newAch.map((a) => `${a.icon} Achievement Unlocked: ${a.name}!`).join("\n")}`
+      : "";
+
     return {
       content: [
-        { type: "text", text: `${companion.name} [${targetSlot}] dismissed.` },
+        { type: "text", text: `${companion.name} [${targetSlot}] dismissed.${achNotice}` },
       ],
     };
   },
